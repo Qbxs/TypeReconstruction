@@ -1,0 +1,5 @@
+package Idris
+
+modules = Main
+
+pkgs = contrib
