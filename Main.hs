@@ -33,7 +33,7 @@ evalStmt (Constraints t) = case runConstraintCollection t of
 evalStmt (Check t) = case typeCheck t of
         (Left err) -> colorize Red $ print err
         (Right eqs) -> do
-          putStr $ show t
+          putStr $ show $ eval t
           colorize Green $ putStr " : "
           print $ getStart eqs
 

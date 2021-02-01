@@ -139,3 +139,20 @@ substitute t s (E t1 t2) = E (subst t s t1) (subst t s t2)
            subst t s NatType = NatType
            subst t s x | s == x = t
                        | otherwise = x
+
+-- | Bonus: Evaluation
+eval :: Term -> Term
+eval (Add t1 t2) = case (eval t1, eval t2) of
+    (Nat a, Nat b) -> Nat $ a+b
+    (a,b) -> Add a b
+eval (App (Lam v t1) t2) = eval $ subst (eval t2) v t1
+  where subst t s (Var s') | s == s' = t
+                           | otherwise = Var s'
+        subst t s (Lam v t') | s == v = Lam v t'
+                             | otherwise = Lam v $ subst t s t'
+        subst t s (App t1 t2) = App (subst t s t1) (subst t s t2)
+        subst t s (Add t1 t2) = Add (subst t s t1) (subst t s t2)
+        subst t s (Nat n) = Nat n
+eval (App t1 t2) = App (eval t1) (eval t2)
+eval (Lam v t) = Lam v $ eval t
+eval lit = lit
