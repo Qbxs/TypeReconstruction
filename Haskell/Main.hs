@@ -30,6 +30,13 @@ evalStmt (Constraints t) = case runConstraintCollection t of
            colorize Green $ putStr " : "
            putStr "α₁ with "
            print eqs
+evalStmt (Unifier t) = case typeCheck t of
+         (Left err) -> colorize Red $ print err
+         (Right eqs) -> do
+           putStr $ show t
+           colorize Green $ putStr " : "
+           putStr "α₁ with "
+           print eqs
 evalStmt (Check t) = case typeCheck t of
         (Left err) -> colorize Red $ print err
         (Right eqs) -> do
@@ -47,4 +54,5 @@ help = do
   putStrLn "Options:"
   putStrLn "  :q to exit"
   putStrLn "  :c to show set of constraints for a term"
+  putStrLn "  :u to show unified set of constraints for a term"
   putStrLn "  :h to display this information"

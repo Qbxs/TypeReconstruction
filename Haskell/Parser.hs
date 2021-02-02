@@ -10,6 +10,7 @@ import TypeReconstruction (Term(..))
 data Stmt
    = Check Term
    | Constraints Term
+   | Unifier Term
    | Help
    | Quit
 
@@ -20,6 +21,7 @@ stmt :: Parser Stmt
 stmt = choice [ try quit
               , try help
               , try constraints
+              , try unifier
               , check
               ]
 
@@ -28,6 +30,9 @@ check = Check <$> term
 
 constraints :: Parser Stmt
 constraints = (string ":c" <|> string ":constraints") >> spaces >> Constraints <$> term
+
+unifier :: Parser Stmt
+unifier = (string ":u" <|> string ":unifier") >> spaces >> Unifier <$> term
 
 help :: Parser Stmt
 help = (string ":h" <|> string ":help") >> return Help
