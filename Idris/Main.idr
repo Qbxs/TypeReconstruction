@@ -85,6 +85,7 @@ constraints (Add t1 t2) t assignment stream = do
   t2 <- constraints t2 NumType assignment stream
   pure $ [t <=> NumType] ++ t1 ++ t2
 
+
 getConstraints : Term -> Either Error (List Equality)
 getConstraints term = run $ do
   stream <- new $ enumFrom 'α'
@@ -118,7 +119,10 @@ unify ((t@(TypeVar _) <=> s@(TypeVar _))::eqs) = if t == s then unify eqs
                                                                         then unify (map (substitute s t) eqs)
                                                                         else unify eqs
 unify ((t <=> s@(TypeVar _))::eqs) = unify ((s <=> t)::eqs)
-unify ((t <=> NumType)::eqs) = ((t <=> NumType)::) <$> unify (map (substitute NumType t) eqs)
+unify ((NumType <=> NumType)::eqs) = unify eqs
+unify ((t <=> NumType)::eqs) = ((t <=> NumType)::) <$> if t `inAny` eqs
+                                                       then unify (map (substitute NumType t) eqs)
+                                                       else unify eqs
 unify ((t <=> s)::eqs) = if t `occursIn` s then Left $ OccursIn t s
                          else ((t <=> s)::) <$> if t `inAny` eqs
                                                 then unify (map (substitute s t) eqs)
@@ -134,6 +138,8 @@ getStart ((t <=> s)::eqs) = if t == startingVar then s
 -- | Bonus: Evaluation
 eval : Term -> Term
 eval (Add t1 t2) = case (eval t1, eval t2) of
+    (Num 0, b) => b
+    (a, Num 0) => a
     (Num a, Num b) => Num $ a+b
     (a,b) => Add a b
 eval (App (Lam v t1) t2) = eval $ subst (eval t2) v t1
@@ -164,7 +170,7 @@ term3 = Lam "y" term2
 term4 : Term
 term4 = Lam "f" (Lam "x" (App (Var "f") (Var "x")))
 plus1 : Term
-plus1 = Lam "x" (Add (Var "x") (Num 1))
+plus1 = Lam "x" (Add (Num 0) (Var "x"))
 times2 : Term
 times2 = Lam "x" (Add (Var "x") (Var "x"))
 arith : Term

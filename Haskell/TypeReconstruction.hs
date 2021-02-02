@@ -51,7 +51,7 @@ term1 = Lam "x" $ Var "x"
 term2 = App term1 $ Nat 42
 term3 = Lam "y" term2
 term4 = Lam "f" (Lam "x" (App (Var "f") (Var "x")))
-plus1 = Lam "x" (Add (Var "x") (Nat 1))
+plus1 = Lam "x" (Add (Var "x") (Nat 0))
 times2 = Lam "x" (Add (Var "x") (Var "x"))
 arith = Lam "f" (Lam "x" (Add (App (Var "f") (Var "x")) (Var "x")))
 omega = Lam "x" (App (Var "x") (Var "x"))
@@ -119,7 +119,10 @@ unify ((E t@(TypeVar _) s@(TypeVar _)):eqs) | t == s = unify eqs
                                             | t `inAny` eqs = (E t s:) <$> unify (map (substitute s t) eqs)
                                             | otherwise = (E t s:) <$> unify eqs
 unify ((E t s@(TypeVar _)):eqs) = unify (E s t:eqs)
-unify ((E t NatType):eqs) = (E t NatType:) <$> unify (map (substitute NatType t) eqs)
+unify ((E NatType NatType):eqs) = unify eqs
+unify ((E t NatType):eqs) = (E t NatType:) <$> if t `inAny` eqs
+                                               then unify (map (substitute NatType t) eqs)
+                                               else unify eqs
 unify ((E t s):eqs) | t `occursIn` s = Left $ OccursIn t s
                     | t `inAny` eqs = (E t s:) <$> unify (map (substitute s t) eqs)
                     | otherwise = (E t s:) <$> unify eqs
@@ -144,6 +147,8 @@ substitute t s (E t1 t2) = E (subst t s t1) (subst t s t2)
 -- | Bonus: Evaluation
 eval :: Term -> Term
 eval (Add t1 t2) = case (eval t1, eval t2) of
+    (Nat 0, b) -> b
+    (a, Nat 0) -> a
     (Nat a, Nat b) -> Nat $ a+b
     (a,b) -> Add a b
 eval (App (Lam v t1) t2) = eval $ subst (eval t2) v t1
