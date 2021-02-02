@@ -43,10 +43,12 @@ data Equality = (<=>) TType TType
 data Error : Type where
   UnboundVariable : String -> Error
   OccursIn : TType -> TType -> Error
+  NumClash : TType -> Error
 
 Show Error where
   show (UnboundVariable var) = var ++ " is an unbound variable."
   show (OccursIn t1 t2) = show t1 ++ " occurs in " ++ show t2
+  show (NumClash t) = "Can not unify " ++ show NumType ++ " with " ++ show t
 
 startingVar : TType
 startingVar = TypeVar "α₁"
@@ -117,6 +119,8 @@ unify ((t@(TypeVar _) <=> s@(TypeVar _))::eqs) = if t == s then unify eqs
                                                                         else unify eqs
 unify ((t <=> s@(TypeVar _))::eqs) = unify ((s <=> t)::eqs)
 unify ((NumType <=> NumType)::eqs) = unify eqs
+unify ((NumType <=> t)::eqs) = unify (t <=> NumType::eqs)
+unify ((t@(ArrowType _ _) <=> NumType)::eqs) = Left $ NumClash t
 unify ((t <=> NumType)::eqs) = ((t <=> NumType)::) <$> if t `inAny` eqs
                                                        then unify (map (substitute NumType t) eqs)
                                                        else unify eqs

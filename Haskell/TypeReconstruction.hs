@@ -31,10 +31,12 @@ instance Show Type where
 data Error
   = UnboundVariable String
   | OccursIn Type Type
+  | NatClash Type
 
 instance Show Error where
   show (UnboundVariable var) = var <> " is an unbound variable."
   show (OccursIn t1 t2) = show t1 <> " occurs in " <> show t2
+  show (NatClash t) = "Can not unify " ++ show NatType ++ " with " ++ show t
 
 main :: IO ()
 main = mapM_ (\t -> do
@@ -120,6 +122,8 @@ unify ((E t@(TypeVar _) s@(TypeVar _)):eqs) | t == s = unify eqs
                                             | otherwise = (E t s:) <$> unify eqs
 unify ((E t s@(TypeVar _)):eqs) = unify (E s t:eqs)
 unify ((E NatType NatType):eqs) = unify eqs
+unify ((E NatType t):eqs) = unify (E t NatType:eqs)
+unify ((E t@(ArrowType _ _) NatType):eqs) = Left $ NatClash t
 unify ((E t NatType):eqs) = (E t NatType:) <$> if t `inAny` eqs
                                                then unify (map (substitute NatType t) eqs)
                                                else unify eqs
