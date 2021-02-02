@@ -113,18 +113,16 @@ substitute t s (t1 <=> t2) = subst t s t1 <=> subst t s t2
 -- | Robinsons Unification algorithm
 unify : (List Equality) -> Either Error (List Equality)
 unify (((ArrowType t1 t2) <=> (ArrowType s1 s2))::eqs) = unify $ [t1 <=> s1, t2 <=> s2] ++ eqs
-unify ((t@(TypeVar _) <=> s@(TypeVar _))::eqs) = if t == s
-                                                 then unify eqs
-                                                 else if t `inAny` eqs
-                                                      then ((t <=> s)::) <$> unify (map (substitute s t) eqs)
-                                                      else ((t <=> s)::) <$> unify eqs
+unify ((t@(TypeVar _) <=> s@(TypeVar _))::eqs) = if t == s then unify eqs
+                                                 else ((t <=> s)::) <$> if t `inAny` eqs
+                                                                        then unify (map (substitute s t) eqs)
+                                                                        else unify eqs
 unify ((t <=> s@(TypeVar _))::eqs) = unify ((s <=> t)::eqs)
 unify ((t <=> NumType)::eqs) = ((t <=> NumType)::) <$> unify (map (substitute NumType t) eqs)
-unify ((t <=> s)::eqs) = if t `occursIn` s
-                         then Left $ OccursIn t s
-                         else if t `inAny` eqs
-                              then ((t <=> s)::) <$> unify (map (substitute s t) eqs)
-                              else ((t <=> s)::) <$> unify eqs
+unify ((t <=> s)::eqs) = if t `occursIn` s then Left $ OccursIn t s
+                         else ((t <=> s)::) <$> if t `inAny` eqs
+                                                then unify (map (substitute s t) eqs)
+                                                else unify eqs
 unify [] = pure []
 
 partial
@@ -153,7 +151,7 @@ typeCheck term = case getConstraints term of
      Left err =>  "Error while collecting constraints: " ++ show err
      Right eqs => case unify (reverse eqs) of
        Left err => "Error while unifying constraints: " ++ show err
-       Right eqs' => show term ++ " : "  ++ show (getStart eqs')
+       Right eqs' => show term ++ " ▷ " ++ show (eval term) ++ " : "  ++ show (getStart eqs')
 
 
 -- | Exmaple terms
@@ -171,6 +169,12 @@ times2 : Term
 times2 = Lam "x" (Add (Var "x") (Var "x"))
 arith : Term
 arith = Lam "f" (Lam "x" (Add (App (Var "f") (Var "x")) (Var "x")))
+sCombinator : Term
+sCombinator = Lam "x" (Lam "y" (Lam "z" (App (App (Var "x") (Var "z")) (App (Var "y") (Var "z")))))
+kCombinator : Term
+kCombinator = Lam "t" (Lam "u" (Var "t"))
+skk : Term
+skk = App (App sCombinator kCombinator) kCombinator
 omega : Term
 omega = Lam "x" (App (Var "x") (Var "x"))
 
@@ -184,4 +188,7 @@ main = do
   putStrLn $ typeCheck plus1
   putStrLn $ typeCheck times2
   putStrLn $ typeCheck arith
+  putStrLn $ typeCheck sCombinator
+  putStrLn $ typeCheck kCombinator
+  putStrLn $ typeCheck skk
   putStrLn $ typeCheck omega
