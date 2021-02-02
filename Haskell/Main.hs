@@ -45,8 +45,8 @@ evalStmt (Check t) = case typeCheck t of
           print $ getStart eqs
 
 -- | Set and reset color for a given IO-action
-colorize :: Color -> IO () -> IO ()
-colorize c m = setSGR [SetColor Foreground Vivid c] >> m >> setSGR [Reset]
+colorize :: Color -> IO a -> IO ()
+colorize c io = setSGR [SetColor Foreground Vivid c] >> io >> setSGR [Reset]
 
 help :: IO ()
 help = do
