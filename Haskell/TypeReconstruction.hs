@@ -39,8 +39,10 @@ instance Show Error where
 main :: IO ()
 main = mapM_ (\t -> do
               (putStr . show) t
+              putStr " ▷ "
+              (putStr . show . eval) t
               putStr " : "
-              print (typeCheck t)) [term1,term2,term3,term4,plus1,times2,arith,omega]
+              print (getStart <$> typeCheck t)) [term1,term2,term3,term4,plus1,times2,arith,omega]
 
 
 -- examples
@@ -114,7 +116,6 @@ constraintCollection (Add t1 t2) t = do
 unify :: [Equality] -> Either Error [Equality]
 unify ((E (ArrowType t1 t2) (ArrowType s1 s2)):eqs) = unify $ [E t1 s1, E t2 s2] <> eqs
 unify ((E t@(TypeVar _) s@(TypeVar _)):eqs) | t == s = unify eqs
-                                            | t `occursIn` s = Left $ OccursIn t s
                                             | t `inAny` eqs = (E t s:) <$> unify (map (substitute s t) eqs)
                                             | otherwise = (E t s:) <$> unify eqs
 unify ((E t s@(TypeVar _)):eqs) = unify (E s t:eqs)
