@@ -52,46 +52,43 @@ startingVar : TType
 startingVar = TypeVar "α₁"
 
 constraints :
-  Term -> TType -> (assignment, stream : Var)
-  -> ST (Either Error) (List Equality) [assignment ::: State (List (String,String)),
+  Term -> TType -> (context, stream : Var)
+  -> ST (Either Error) (List Equality) [context ::: State (List (String,String)),
                                         stream ::: State (Stream Char)]
-constraints (Var var) t assignment _ = do
-  ctx <- read assignment
+constraints (Var var) t context _ = do
+  ctx <- read context
   case lookup var ctx of
     Just var' => pure [t <=> (TypeVar var')]
     Nothing => lift $ Left $ UnboundVariable var
-constraints (Lam x z) t assignment stream = do
-  ctx <- read assignment
-  s <- read stream
-  let [a,b] = map singleton $ take 2 s
-  write stream (drop 2 s)
-  write assignment ((x,a)::ctx)
-  e <- constraints z (TypeVar b) assignment stream
+constraints (Lam x z) t context stream = do
+  let [a,b] = map singleton $ take 2 !(read stream)
+  update stream (drop 2)
+  update context ((x,a)::)
+  e <- constraints z (TypeVar b) context stream
   pure $ [t <=> (ArrowType (TypeVar a) (TypeVar b))] ++ e
-constraints (App t1 t2) t assignment stream = do
-  ctx <- read assignment
-  s <- read stream
-  let a = singleton $ head s
-  write stream (tail s)
-  t1 <- constraints t1 (ArrowType (TypeVar a) t) assignment stream
-  write assignment ctx
-  t2 <- constraints t2 (TypeVar a) assignment stream
+constraints (App t1 t2) t context stream = do
+  ctx <- read context
+  let a = singleton $ head !(read stream)
+  update stream tail
+  t1 <- constraints t1 (ArrowType (TypeVar a) t) context stream
+  write context ctx
+  t2 <- constraints t2 (TypeVar a) context stream
   pure $ t1 ++ t2
 constraints (Num x) t _ _ = pure [t <=> NumType]
-constraints (Add t1 t2) t assignment stream = do
-  ctx <- read assignment
-  t1 <- constraints t1 NumType assignment stream
-  write assignment ctx
-  t2 <- constraints t2 NumType assignment stream
+constraints (Add t1 t2) t context stream = do
+  ctx <- read context
+  t1 <- constraints t1 NumType context stream
+  write context ctx
+  t2 <- constraints t2 NumType context stream
   pure $ [t <=> NumType] ++ t1 ++ t2
 
 
 getConstraints : Term -> Either Error (List Equality)
 getConstraints term = run $ do
   stream <- new $ enumFrom 'α'
-  assignment <- new []
-  eqs <- constraints term startingVar assignment stream
-  delete assignment
+  context <- new []
+  eqs <- constraints term startingVar context stream
+  delete context
   delete stream
   pure eqs
 
